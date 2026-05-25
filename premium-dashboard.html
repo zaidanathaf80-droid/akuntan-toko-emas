@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucky & Power - Premium Finance Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.3);
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header & Dashboard Summary */
+        .header {
+            margin-bottom: 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .title-section h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .title-section p {
+            color: var(--text-dim);
+        }
+
+        /* Perhitungan / Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--accent, var(--primary));
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+        }
+
+        .card-label {
+            color: var(--text-dim);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .card-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-value.income { color: var(--success); }
+        .card-value.expense { color: var(--danger); }
+
+        /* Table Styles */
+        .table-container {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .table-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            padding: 1rem 1.5rem;
+            color: var(--text-dim);
+            font-weight: 500;
+            font-size: 0.875rem;
+            border-bottom: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.3);
+        }
+
+        td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9375rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .badge-income { background: rgba(16, 185, 129, 0.1); color: #34d399; }
+        .badge-expense { background: rgba(239, 68, 68, 0.1); color: #f87171; }
+
+        .loading-overlay {
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-dim);
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            padding: 1rem;
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            display: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+            .summary-grid { grid-template-columns: 1fr; }
+            th:nth-child(4), td:nth-child(4) { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Error Alert -->
+        <div id="errorAlert" class="error-message">
+            Gagal terhubung ke Backend. Pastikan Laravel sudah berjalan di http://127.0.0.1:8000
+        </div>
+
+        <header class="header">
+            <div class="title-section">
+                <h1>Dashboard Keuangan</h1>
+                <p>Analisis transaksi dan perhitungan otomatis secara real-time.</p>
+            </div>
+            <button id="refreshBtn" style="background: var(--primary); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.75rem; cursor: pointer; font-weight: 600; transition: 0.2s;">
+                Segarkan Data
+            </button>
+        </header>
+
+        <!-- Summary Section (Logika Perhitungan) -->
+        <div class="summary-grid">
+            <div class="card" style="--accent: var(--success);">
+                <span class="card-label">Total Pemasukan</span>
+                <div id="totalIncome" class="card-value income">Rp 0</div>
+            </div>
+            <div class="card" style="--accent: var(--danger);">
+                <span class="card-label">Total Pengeluaran</span>
+                <div id="totalExpense" class="card-value expense">Rp 0</div>
+            </div>
+            <div class="card" style="--accent: var(--primary);">
+                <span class="card-label">Saldo saat ini</span>
+                <div id="netBalance" class="card-value">Rp 0</div>
+            </div>
+        </div>
+
+        <!-- Transaction Table -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3 style="font-size: 1.25rem;">Riwayat Transaksi</h3>
+            </div>
+            <div id="loading" class="loading-overlay">Memuat data...</div>
+            <table id="transactionTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Kategori</th>
+                        <th>Tipe</th>
+                        <th>Catatan</th>
+                        <th style="text-align: right;">Jumlah</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Data akan dimasukkan lewat JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000/api";
+
+        // Fungsi Format Mata Uang
+        function formatIDR(amount) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(amount);
+        }
+
+        // Fungsi Utama Fetch Data
+        async function loadDashboard() {
+            const tableBody = document.getElementById('tableBody');
+            const table = document.getElementById('transactionTable');
+            const loading = document.getElementById('loading');
+            const errorAlert = document.getElementById('errorAlert');
+
+            try {
+                // 1. Ambil Summary (Logika Perhitungan di Backend)
+                const summaryRes = await fetch(`${API_URL}/dashboard/summary`);
+                const summaryData = await summaryRes.json();
+
+                // 2. Ambil List Transaksi
+                const transRes = await fetch(`${API_URL}/transactions`);
+                const transactions = await transRes.json();
+
+                // Update UI Perhitungan
+                document.getElementById('totalIncome').innerText = formatIDR(summaryData.totalIncome);
+                document.getElementById('totalExpense').innerText = formatIDR(summaryData.totalExpense);
+                document.getElementById('netBalance').innerText = formatIDR(summaryData.netBalance);
+
+                // Update UI Tabel
+                tableBody.innerHTML = '';
+                transactions.forEach(tx => {
+                    const date = new Date(tx.date).toLocaleDateString('id-ID', { 
+                        day: '2-digit', month: 'short', year: 'numeric' 
+                    });
+                    
+                    const typeLabel = tx.type === 'income' ? 'Masuk' : 'Keluar';
+                    
+                    const row = `
+                        <tr>
+                            <td>${date}</td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary);"></div>
+                                    ${tx.category}
+                                </div>
+                            </td>
+                            <td><span class="badge badge-${tx.type}">${typeLabel}</span></td>
+                            <td style="color: var(--text-dim); font-size: 0.85rem;">${tx.notes || '-'}</td>
+                            <td style="text-align: right; font-weight: 600; color: ${tx.type === 'income' ? 'var(--success)' : 'var(--danger)'}">
+                                ${tx.type === 'income' ? '+' : '-'} ${formatIDR(tx.amount)}
+                            </td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+                });
+
+                loading.style.display = 'none';
+                table.style.display = 'table';
+                errorAlert.style.display = 'none';
+
+            } catch (error) {
+                console.error("Dashboard error:", error);
+                loading.style.display = 'none';
+                errorAlert.style.display = 'block';
+            }
+        }
+
+        // Event Listener
+        document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+
+        // Inisialisasi
+        window.addEventListener('load', loadDashboard);
+    </script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Backend Test</title>
+    <style>
+      body {
+        font-family: Arial;
+        margin: 20px;
+      }
+      .success {
+        color: green;
+      }
+      .error {
+        color: red;
+      }
+      pre {
+        background: #f0f0f0;
+        padding: 10px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Backend API Test</h1>
+    <p>Backend: <strong>http://127.0.0.1:8000/api</strong></p>
+    <hr />
+
+    <h2>Transactions</h2>
+    <div id="transactions"></div>
+
+    <h2>Raw Response</h2>
+    <pre id="response"></pre>
+
+    <script>
+      async function loadTransactions() {
+        try {
+          console.log("Fetching from: http://127.0.0.1:8000/api/transactions");
+          const response = await fetch(
+            "http://127.0.0.1:8000/api/transactions",
+          );
+
+          console.log("Response status:", response.status);
+          const text = await response.text();
+          document.getElementById("response").textContent = text;
+
+          if (response.ok) {
+            const data = JSON.parse(text);
+            let html = `<div class="success">✓ Found ${data.length} transactions</div><ul>`;
+            data.forEach((t) => {
+              html += `<li>${t.date}: ${t.type} - ${t.category} (${t.amount})</li>`;
+            });
+            html += "</ul>";
+            document.getElementById("transactions").innerHTML = html;
+          } else {
+            document.getElementById("transactions").innerHTML =
+              `<div class="error">✗ Error ${response.status}: ${response.statusText}</div>`;
+          }
+        } catch (err) {
+          document.getElementById("transactions").innerHTML =
+            `<div class="error">✗ Error: ${err.message}</div>`;
+          document.getElementById("response").textContent = err.message;
+          console.error(err);
+        }
+      }
+
+      loadTransactions();
+    </script>
+  </body>
+</html>
