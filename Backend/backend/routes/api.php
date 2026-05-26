@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\LockedSnapshotController;
+use App\Http\Controllers\NotaLakuController;
 
 /*
 |--------------------------------------------------------------------------
@@ -54,3 +55,9 @@ Route::get('/locked-snapshots/trash/list', [LockedSnapshotController::class, 'tr
 // Laku Lock endpoints (permanent checkbox lock for Data Terjual sidebar)
 Route::get('/laku-locks', [TransactionController::class, 'getLakuLocks']);
 Route::post('/laku-locks', [TransactionController::class, 'storeLakuLocks']);
+
+// Nota LAKU endpoints
+Route::get('/nota-laku', [NotaLakuController::class, 'index']);
+Route::post('/nota-laku', [NotaLakuController::class, 'store']);
+Route::post('/nota-laku/{id}/print', [NotaLakuController::class, 'markPrinted']);
+Route::delete('/nota-laku/{id}', [NotaLakuController::class, 'destroy']);

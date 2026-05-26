@@ -85,4 +85,11 @@ export const lakuLockAPI = {
   lockIds: (ids) => api.post("/laku-locks", { ids }),
 };
 
+// Nota LAKU API
+export const notaLakuAPI = {
+  create: (data) => api.post("/nota-laku", data),
+  markPrinted: (id) => api.post(`/nota-laku/${id}/print`),
+  delete: (id) => api.delete(`/nota-laku/${id}`),
+};
+
 export default api;
