@@ -75,6 +75,8 @@ export const lockedSnapshotAPI = {
   create: (data) => api.post("/locked-snapshots", data),
   update: (id, data) => api.put(`/locked-snapshots/${id}`, data),
   delete: (id) => api.delete(`/locked-snapshots/${id}`),
+  restore: (id) => api.post(`/locked-snapshots/${id}/restore`),
+  getTrash: () => api.get("/locked-snapshots/trash/list"),
 };
 
 // Laku Lock API — permanent checkbox lock for Data Terjual sidebar

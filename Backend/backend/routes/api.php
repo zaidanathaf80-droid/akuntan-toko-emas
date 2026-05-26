@@ -48,6 +48,8 @@ Route::get('/locked-snapshots', [LockedSnapshotController::class, 'index']);
 Route::post('/locked-snapshots', [LockedSnapshotController::class, 'store']);
 Route::put('/locked-snapshots/{id}', [LockedSnapshotController::class, 'update']);
 Route::delete('/locked-snapshots/{id}', [LockedSnapshotController::class, 'destroy']);
+Route::post('/locked-snapshots/{id}/restore', [LockedSnapshotController::class, 'restore']);
+Route::get('/locked-snapshots/trash/list', [LockedSnapshotController::class, 'trash']);
 
 // Laku Lock endpoints (permanent checkbox lock for Data Terjual sidebar)
 Route::get('/laku-locks', [TransactionController::class, 'getLakuLocks']);

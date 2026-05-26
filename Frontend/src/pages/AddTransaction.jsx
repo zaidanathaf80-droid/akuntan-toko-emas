@@ -125,7 +125,7 @@ export default function AddTransaction({ onSave, theme }) {
     const newErrors = {};
     // Skip amount validation when T/LBR + Tambahan
     const isTambahanLBR = category === "T/LBR" && lbrJenisTransaksi === "Tambahan";
-    if (!isTambahanLBR && (!amount || amount <= 0)) {
+    if (!isTambahanLBR && (!amount || parseInt(amount.replace(/\D/g, "")) <= 0)) {
       newErrors.amount = "Masukkan jumlah yang valid (lebih dari 0)";
     }
     if (!category.trim()) {

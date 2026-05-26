@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { lockedSnapshotAPI, transactionAPI } from "../utils/api";
+import { Toast, useToast } from "../components/Toast";
 
 const CATEGORIES = [
   { key: "T/KP", label: "T/KP", icon: "💍", color: "amber" },
@@ -49,6 +50,8 @@ const colorMap = {
 };
 
 export default function Margin({ transactions = [], theme, onRefresh }) {
+  const { toast, show: showToast, close: closeToast, success, error, info } = useToast();
+  
   const [activeCategory, setActiveCategory] = useState("T/KP");
   const [hargaEmasPerGram, setHargaEmasPerGram] = useState("");
   const [hargaEmasStatus, setHargaEmasStatus] = useState("cek_harga");
@@ -68,6 +71,7 @@ export default function Margin({ transactions = [], theme, onRefresh }) {
   const [editForm, setEditForm] = useState(null);
   const [activeRankingKadar, setActiveRankingKadar] = useState("Semua");
   const [showLakuCompare, setShowLakuCompare] = useState(false);
+  const [isDiscarding, setIsDiscarding] = useState(false);
 
   useEffect(() => {
     setSearchQuery("");
@@ -2048,40 +2052,6 @@ export default function Margin({ transactions = [], theme, onRefresh }) {
                   <td className={`py-4 px-6 text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>Σ Seluruh Harga</td>
                   <td className={`py-4 px-6 text-right font-bold text-lg ${theme === "dark" ? "text-white" : "text-gray-900"}`}>Rp {formatCurrency(totalModal)}</td>
                 </tr>
-                {/* Extra: Total Berat Terima (for T/KP and T/LBR) */}
-                {(activeCategory === "T/KP" || activeCategory === "T/LBR") && (
-                  <tr className={`border-b ${theme === "dark" ? "border-gray-700" : "border-gray-100"}`}>
-                    <td className={`py-4 px-6 font-semibold ${theme === "dark" ? "text-gray-200" : "text-gray-900"}`}>
-                      <div className="flex items-center gap-2"><span>⚖️</span> Total Berat Terima</div>
-                    </td>
-                    <td className={`py-4 px-6 text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>Σ Berat Terima</td>
-                    <td className={`py-4 px-6 text-right font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>{totalBeratTerima.toFixed(2)} gram</td>
-                  </tr>
-                )}
-                {/* Extra: Rata-rata Lantak (for T/KP and T/LBR) */}
-                {(activeCategory === "T/KP" || activeCategory === "T/LBR") && (
-                  <tr className={`border-b ${theme === "dark" ? "border-gray-700" : "border-gray-100"}`}>
-                    <td className={`py-4 px-6 font-semibold ${theme === "dark" ? "text-gray-200" : "text-gray-900"}`}>
-                      <div className="flex items-center gap-2"><span>🔨</span> Rata-rata Lantak</div>
-                    </td>
-                    <td className={`py-4 px-6 text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
-                      {activeCategory === "T/KP"
-                        ? "Σ (Harga ÷ BRT Terima ÷ Kadar ÷ 1000) / Jumlah Data"
-                        : "Σ Lantak / Jumlah Data"}
-                    </td>
-                    <td className={`py-4 px-6 text-right font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>Rp {formatCurrency(Math.round(rataRataLantak))}</td>
-                  </tr>
-                )}
-                {/* Extra: Total Berat Awal (only for T/LBR) */}
-                {activeCategory === "T/LBR" && (
-                  <tr className={`border-b ${theme === "dark" ? "border-gray-700" : "border-gray-100"}`}>
-                    <td className={`py-4 px-6 font-semibold ${theme === "dark" ? "text-gray-200" : "text-gray-900"}`}>
-                      <div className="flex items-center gap-2"><span>⚖️</span> Total Berat Awal</div>
-                    </td>
-                    <td className={`py-4 px-6 text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>Σ Berat Awal</td>
-                    <td className={`py-4 px-6 text-right font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>{totalBeratAwal.toFixed(2)} gram</td>
-                  </tr>
-                )}
                 {/* 2. Nilai Kemurnian Emas */}
                 <tr className={`border-b ${theme === "dark" ? "border-gray-700 bg-emerald-900/10" : "border-gray-100 bg-emerald-50/50"}`}>
                   <td className={`py-4 px-6 font-semibold ${theme === "dark" ? "text-emerald-400" : "text-emerald-700"}`}>
@@ -2147,15 +2117,18 @@ export default function Margin({ transactions = [], theme, onRefresh }) {
       {/* ============ SNAPSHOTS MATEMATIKA OTOMATIS ============ */}
       {activeCategory === "T/LBR" && (period === "all" || period === "monthly" || period === "yearly") && lockedSnapshots.map((snap, idx) => {
         const snapHargaNum = parseFloat((snap.hargaEmasPerGram || "").replace(/\D/g, "")) || 0;
+        const snapNilaiKemurnianEmas = parseFloat(snap.nilaiKemurnianEmas) || 0;
+        const snapTotalModal = parseFloat(snap.totalModal) || 0;
+        const snapTotalBeratTambahan = parseFloat(snap.totalBeratTambahan) || 0;
         const snapNetKemurnianEmas = snap.category === "T/LBR"
-          ? (snap.nilaiKemurnianEmas - getSnapshotKemurnianTambahan(snap))
-          : snap.nilaiKemurnianEmas;
+          ? (snapNilaiKemurnianEmas - getSnapshotKemurnianTambahan(snap))
+          : snapNilaiKemurnianEmas;
         const snapNilaiSaatIni = snapNetKemurnianEmas * snapHargaNum;
-        const snapLabaBersih = snapNilaiSaatIni - snap.totalModal;
-        const snapGpm = snap.totalModal > 0 ? (snapLabaBersih / snap.totalModal) * 100 : 0;
+        const snapLabaBersih = snapNilaiSaatIni - snapTotalModal;
+        const snapGpm = snapTotalModal > 0 ? (snapLabaBersih / snapTotalModal) * 100 : 0;
         const snapNilaiKemurnianEmasTambahan = getSnapshotKemurnianTambahan(snap);
-        const snapRataRataKadarTambahan = (snap.totalBeratTambahan || 0) > 0
-          ? (snapNilaiKemurnianEmasTambahan / snap.totalBeratTambahan) * 100
+        const snapRataRataKadarTambahan = snapTotalBeratTambahan > 0
+          ? (snapNilaiKemurnianEmasTambahan / snapTotalBeratTambahan) * 100
           : 0;
 
         const updateSnapshot = (id, updates) => {
@@ -2265,7 +2238,7 @@ export default function Margin({ transactions = [], theme, onRefresh }) {
                   {snap.category === "T/LBR" && (
                     <tr className={`border-b ${theme === "dark" ? "border-gray-700" : "border-gray-100"}`}>
                       <td className={`py-3 px-6 font-semibold ${theme === "dark" ? "text-gray-200" : "text-gray-900"}`}>📦 Total Berat Tambahan</td>
-                      <td className={`py-3 px-6 text-right font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>{(snap.totalBeratTambahan || 0).toFixed(2)} gram</td>
+                      <td className={`py-3 px-6 text-right font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>{snapTotalBeratTambahan.toFixed(2)} gram</td>
                     </tr>
                   )}
                   {snap.category === "T/LBR" && (
@@ -2282,23 +2255,11 @@ export default function Margin({ transactions = [], theme, onRefresh }) {
                   )}
                   <tr className={`border-b ${theme === "dark" ? "border-gray-700" : "border-gray-100"}`}>
                     <td className={`py-3 px-6 font-semibold ${theme === "dark" ? "text-gray-200" : "text-gray-900"}`}>💰 Total Modal</td>
-                    <td className={`py-3 px-6 text-right font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>Rp {formatCurrency(snap.totalModal)}</td>
-                  </tr>
-                  <tr className={`border-b ${theme === "dark" ? "border-gray-700" : "border-gray-100"}`}>
-                    <td className={`py-3 px-6 font-semibold ${theme === "dark" ? "text-gray-200" : "text-gray-900"}`}>⚖️ Total Berat Terima</td>
-                    <td className={`py-3 px-6 text-right font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>{snap.totalBeratTerima.toFixed(2)} gram</td>
-                  </tr>
-                  <tr className={`border-b ${theme === "dark" ? "border-gray-700" : "border-gray-100"}`}>
-                    <td className={`py-3 px-6 font-semibold ${theme === "dark" ? "text-gray-200" : "text-gray-900"}`}>🔨 Rata-rata Lantak</td>
-                    <td className={`py-3 px-6 text-right font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>Rp {formatCurrency(Math.round(snap.rataRataLantak))}</td>
-                  </tr>
-                  <tr className={`border-b ${theme === "dark" ? "border-gray-700" : "border-gray-100"}`}>
-                    <td className={`py-3 px-6 font-semibold ${theme === "dark" ? "text-gray-200" : "text-gray-900"}`}>⚖️ Total Berat Awal</td>
-                    <td className={`py-3 px-6 text-right font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>{snap.totalBeratAwal.toFixed(2)} gram</td>
+                    <td className={`py-3 px-6 text-right font-bold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>Rp {formatCurrency(snapTotalModal)}</td>
                   </tr>
                   <tr className={`border-b ${theme === "dark" ? "border-gray-700 bg-emerald-900/10" : "border-gray-100 bg-emerald-50/50"}`}>
                     <td className={`py-3 px-6 font-semibold ${theme === "dark" ? "text-emerald-400" : "text-emerald-700"}`}>✨ Nilai Kemurnian Emas</td>
-                    <td className={`py-3 px-6 text-right font-bold ${theme === "dark" ? "text-emerald-400" : "text-emerald-700"}`}>{snap.nilaiKemurnianEmas.toFixed(2)} gram</td>
+                    <td className={`py-3 px-6 text-right font-bold ${theme === "dark" ? "text-emerald-400" : "text-emerald-700"}`}>{snapNilaiKemurnianEmas.toFixed(2)} gram</td>
                   </tr>
                   {/* Dynamic sections based on snapshot's hargaEmasPerGram */}
                   <tr className={`border-b ${theme === "dark" ? "border-gray-700 bg-blue-900/10" : "border-gray-100 bg-blue-50/50"}`}>
@@ -2384,10 +2345,21 @@ export default function Margin({ transactions = [], theme, onRefresh }) {
                 Buang Data Terkunci?
               </h3>
               <p className={`mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                Apakah Anda yakin ingin menghapus <strong>Data Terkunci #{snapshotToDiscard.idx + 1}</strong> beserta seluruh transaksi di dalamnya secara permanen?
+                Apakah Anda yakin ingin menghapus <strong>Tabel Terkunci #{snapshotToDiscard.idx + 1}</strong>?
               </p>
-              <p className={`mb-6 text-xs ${theme === 'dark' ? 'text-red-450 font-semibold' : 'text-red-650 font-semibold'}`}>
-                ⚠️ Tindakan ini permanen. Data tidak akan dikembalikan ke dalam Sistem Matematika Otomatis.
+              <div className={`mb-4 p-3 rounded-lg ${theme === 'dark' ? 'bg-green-900/30 border border-green-700' : 'bg-green-50 border border-green-200'}`}>
+                <p className={`text-sm font-semibold ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>
+                  ✓ Data T/LBR tetap tersimpan dan tidak akan hilang
+                </p>
+                <p className={`text-xs ${theme === 'dark' ? 'text-green-300' : 'text-green-600'}`}>
+                  Dashboard, Riwayat, dan Laporan akan tetap menampilkan data ini
+                </p>
+              </div>
+              <p className={`mb-2 text-sm font-semibold ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+                📊 Hanya menghapus snapshot/tabel terkunci saja
+              </p>
+              <p className={`mb-6 text-xs ${theme === 'dark' ? 'text-amber-450 font-semibold' : 'text-amber-650 font-semibold'}`}>
+                ⚠️ Anda masih bisa restore dalam 7 hari. Setelah itu tabel terkunci akan dihapus permanen.
               </p>
               <div className="flex space-x-3 w-full">
                 <button
@@ -2398,31 +2370,67 @@ export default function Margin({ transactions = [], theme, onRefresh }) {
                 </button>
                 <button
                   onClick={async () => {
+                    setIsDiscarding(true);
                     try {
-                      // 1. Delete all transactions associated with this snapshot from database
-                      const txIds = snapshotToDiscard.snap.transaction_ids || [];
-                      await Promise.all(txIds.map(id => transactionAPI.delete(id)));
-
-                      // 2. Delete the locked snapshot record from database
+                      // 1. Soft delete the locked snapshot record from database ONLY
+                      // Transactions tetap ada di T/LBR table
                       await lockedSnapshotAPI.delete(snapshotToDiscard.snap.id);
 
-                      // 3. Update local state variables
+                      // 2. Update local state variables
                       setLockedSnapshots(lockedSnapshots.filter(s => s.id !== snapshotToDiscard.snap.id));
+                      
+                      // 3. Remove locked transaction IDs from state
+                      const txIds = snapshotToDiscard.snap.transaction_ids || [];
                       setLockedTransactionIds(lockedTransactionIds.filter(id => !txIds.includes(id)));
 
-                      // 4. Refresh parent component data
+                      // 4. Show success toast with undo button
+                      const snapshotId = snapshotToDiscard.snap.id;
+                      success(
+                        `Tabel Terkunci #${snapshotToDiscard.idx + 1} berhasil dihapus! Data T/LBR tetap tersimpan.`,
+                        10000, // 10 second undo window
+                        {
+                          label: 'Undo',
+                          onClick: async () => {
+                            try {
+                              await lockedSnapshotAPI.restore(snapshotId);
+                              // Refresh snapshots
+                              const response = await lockedSnapshotAPI.getAll(activeCategory);
+                              const snaps = response.data || [];
+                              setLockedSnapshots(snaps);
+                              const ids = snaps.flatMap(s => s.transaction_ids || []);
+                              setLockedTransactionIds(ids);
+                              info('Tabel Terkunci berhasil dikembalikan!');
+                              closeToast();
+                            } catch (err) {
+                              error('Gagal restore tabel terkunci');
+                            }
+                          }
+                        }
+                      );
+
+                      // 5. Refresh parent component data
                       if (onRefresh) {
                         onRefresh();
                       }
-                    } catch (error) {
-                      console.error("Failed to discard snapshot and its transactions:", error);
-                      alert("Gagal membuang data transaksi!");
+                    } catch (err) {
+                      console.error("Failed to discard snapshot:", err);
+                      error(`Gagal membuang tabel terkunci: ${err.response?.data?.message || err.message}`);
+                    } finally {
+                      setIsDiscarding(false);
+                      setSnapshotToDiscard(null);
                     }
-                    setSnapshotToDiscard(null);
                   }}
-                  className="flex-1 bg-red-650 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition-colors shadow-md"
+                  disabled={isDiscarding}
+                  className={`flex-1 ${isDiscarding ? 'bg-red-400 cursor-not-allowed' : 'bg-red-650 hover:bg-red-700'} text-white py-3 rounded-xl font-bold transition-colors shadow-md flex items-center justify-center space-x-2`}
                 >
-                  Ya, Buang
+                  {isDiscarding ? (
+                    <>
+                      <span className="animate-spin">⏳</span>
+                      <span>Sedang memproses...</span>
+                    </>
+                  ) : (
+                    <span>Ya, Buang</span>
+                  )}
                 </button>
               </div>
             </div>
@@ -2462,9 +2470,6 @@ export default function Margin({ transactions = [], theme, onRefresh }) {
                       date: new Date().toISOString(),
                       period: period,
                       totalModal,
-                      totalBeratTerima,
-                      rataRataLantak,
-                      totalBeratAwal,
                       totalBeratTambahan,
                       nilaiKemurnianEmas,
                       hargaEmasPerGram: hargaEmasPerGram,
@@ -2899,6 +2904,9 @@ export default function Margin({ transactions = [], theme, onRefresh }) {
           </div>
         </div>
       )}
+
+      {/* Toast Notification */}
+      {toast && <Toast {...toast} onClose={closeToast} />}
 
     </div>
   );

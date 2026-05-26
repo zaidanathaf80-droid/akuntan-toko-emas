@@ -45,9 +45,6 @@ class LockedSnapshotController extends Controller
                 'date' => 'required|date',
                 'period' => 'required|string|max:50',
                 'totalModal' => 'required|numeric',
-                'totalBeratTerima' => 'required|numeric',
-                'rataRataLantak' => 'required|numeric',
-                'totalBeratAwal' => 'required|numeric',
                 'totalBeratTambahan' => 'required|numeric',
                 'nilaiKemurnianEmas' => 'required|numeric',
                 'hargaEmasPerGram' => 'nullable|string|max:100',
@@ -60,9 +57,6 @@ class LockedSnapshotController extends Controller
                 'date' => Carbon::parse($validated['date'])->format('Y-m-d H:i:s'),
                 'period' => $validated['period'],
                 'totalModal' => $validated['totalModal'],
-                'totalBeratTerima' => $validated['totalBeratTerima'],
-                'rataRataLantak' => $validated['rataRataLantak'],
-                'totalBeratAwal' => $validated['totalBeratAwal'],
                 'totalBeratTambahan' => $validated['totalBeratTambahan'],
                 'nilaiKemurnianEmas' => $validated['nilaiKemurnianEmas'],
                 'hargaEmasPerGram' => $validated['hargaEmasPerGram'] ?? '',
@@ -132,7 +126,7 @@ class LockedSnapshotController extends Controller
 
     /**
      * DELETE /locked-snapshots/{id}
-     * Delete a snapshot
+     * Soft delete a snapshot (mark as deleted, don't remove from DB)
      */
     public function destroy($id)
     {
@@ -146,11 +140,13 @@ class LockedSnapshotController extends Controller
         }
 
         try {
+            // Soft delete - mark as deleted but keep in database
             $snapshot->delete();
 
             return response()->json([
                 'message' => 'Snapshot deleted successfully',
                 'statusCode' => 200,
+                'deleted_at' => $snapshot->deleted_at,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -159,4 +155,54 @@ class LockedSnapshotController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * POST /locked-snapshots/{id}/restore
+     * Restore a soft-deleted snapshot
+     */
+    public function restore($id)
+    {
+        $snapshot = LockedSnapshot::withTrashed()->find($id);
+
+        if (!$snapshot) {
+            return response()->json([
+                'message' => 'Snapshot not found',
+                'statusCode' => 404,
+            ], 404);
+        }
+
+        try {
+            $snapshot->restore();
+
+            return response()->json([
+                'message' => 'Snapshot restored successfully',
+                'statusCode' => 200,
+                'data' => $snapshot,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to restore snapshot',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * GET /locked-snapshots/trash/list
+     * Get all soft-deleted snapshots (for recovery)
+     */
+    public function trash()
+    {
+        try {
+            $trashedSnapshots = LockedSnapshot::onlyTrashed()->orderBy('deleted_at', 'desc')->get();
+
+            return response()->json($trashedSnapshots, 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to fetch trash',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }
